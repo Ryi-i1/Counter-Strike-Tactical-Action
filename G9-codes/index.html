@@ -1,0 +1,1527 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FLAG RUSH - GRAND TACTICAL PRO</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Rajdhani:wght=600;700;900&display=swap');
+    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    body {
+      background-color: #0b0d11;
+      /* 全螢幕背景圖設定 */
+      background-image: url('assets/textures/bg_image.jpg'); 
+      background-size: cover;
+      background-position: center;
+      background-attachment: fixed;
+
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+      font-family: 'Rajdhani', sans-serif;
+      user-select: none;
+    }
+
+    /* 遊戲本體的容器，固定尺寸 1000x600 (5:3) 嚴格限制不超出 */
+    #app-container {
+      position: relative;
+      width: 1000px;
+      height: 600px;
+      box-shadow: 0 30px 80px rgba(0,0,0,0.9);
+      border: 2px solid #232a35;
+      background: #141921;
+      overflow: hidden;
+    }
+
+    /* ==========================================
+       賽前大廳主容器 (Lobby)
+       ========================================== */
+    #cs2-lobby {
+      position: absolute;
+      inset: 0;
+      background: #080b0e;
+      z-index: 2000;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #eceff4;
+      width: 1000px;
+      height: 600px;
+    }
+
+    /* ==========================================
+       Step 1: 參數設定介面 (Match Settings)
+       ========================================== */
+    #lobby-step-1 {
+      background: rgba(11, 16, 22, 0.96);
+      border: 1px solid #2f3a4e;
+      border-top: 4px solid #5d79ae;
+      padding: 35px 40px;
+      width: 460px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.9);
+      display: flex;
+      flex-direction: column;
+    }
+    .lobby-title {
+      font-size: 28px;
+      font-weight: 900;
+      color: #9bb7e8;
+      margin-bottom: 25px;
+      text-align: center;
+      letter-spacing: 2px;
+    }
+    .lobby-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 18px;
+      font-size: 15px;
+      font-weight: 700;
+      color: #8a96a3;
+    }
+    .lobby-input {
+      background: #05070a;
+      border: 1px solid #435470;
+      color: #fff;
+      font-size: 16px;
+      font-family: 'Rajdhani', sans-serif;
+      padding: 6px 12px;
+      width: 180px;
+      text-align: center;
+      font-weight: 900;
+      outline: none;
+      border-radius: 2px;
+    }
+    .lobby-input:focus { border-color: #de9b35; }
+    
+    .next-btn {
+      width: 100%;
+      background: #5d79ae;
+      color: #0b0d11;
+      padding: 12px;
+      font-size: 20px;
+      font-weight: 900;
+      border: none;
+      cursor: pointer;
+      margin-top: 15px;
+      letter-spacing: 1px;
+      transition: all 0.2s;
+      clip-path: polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+    }
+    .next-btn:hover { background: #7ba3eb; }
+
+    /* ==========================================
+       Step 2: 獨立選角特寫介面 (與圖片UI高度一致，嚴格控高)
+       ========================================== */
+    #lobby-step-2 {
+      display: none; /* 初始隱藏，選完自動切換 */
+      width: 1000px;
+      height: 600px;
+      background: radial-gradient(circle at center, #161f2b 0%, #070a0e 100%);
+      position: relative;
+      flex-direction: column;
+      padding: 30px 40px;
+      justify-content: space-between;
+    }
+    .cs-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-end;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+      padding-bottom: 12px;
+      height: 50px;
+    }
+    .cs-title {
+      font-size: 34px;
+      font-weight: 900;
+      letter-spacing: 2px;
+      color: #eceff4;
+      text-shadow: 0 0 10px rgba(255,255,255,0.2);
+    }
+    .cs-subtitle {
+      font-size: 16px;
+      color: #8a96a3;
+      font-weight: 700;
+      letter-spacing: 1px;
+    }
+    
+    /* 卡片橫向排列容器 */
+    #char-cards-container {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      width: 100%;
+      height: 360px; /* 固定高度防止卡片溢出 */
+      align-items: center;
+    }
+    
+    /* 單張探員卡片高階戰術設計 */
+    .char-card {
+      width: 200px;
+      height: 340px;
+      background: #0f141c;
+      border: 1px solid #2f3a4e;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.25, 0.8, 0.25, 1);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+      /* 戰術斜切角 */
+      clip-path: polygon(15px 0, 100% 0, 100% calc(100% - 15px), calc(100% - 15px) 100%, 0 100%, 0 15px);
+      position: relative;
+    }
+    .char-card:hover {
+      transform: translateY(-5px);
+      background: #131a24;
+    }
+    
+    /* 專屬特寫照區塊 (填滿卡片) */
+    .char-port {
+      flex: 1;
+      background-size: cover;
+      background-position: center top;
+      background-repeat: no-repeat;
+      background-color: #0b0f14;
+      position: relative;
+      transition: transform 0.3s ease;
+    }
+    .char-card:hover .char-port {
+      transform: scale(1.03);
+    }
+    /* 下半部融入環境的暗色戰術漸層襯底 */
+    .char-port::after {
+      content: '';
+      position: absolute;
+      bottom: 0; left: 0; right: 0;
+      height: 55%;
+      background: linear-gradient(to top, #0f141c 15%, rgba(15,20,28,0) 100%);
+    }
+
+    /* 名字與職位盒區 */
+    .char-name-box {
+      position: absolute;
+      bottom: 0;
+      width: 100%;
+      padding: 16px;
+      text-align: center;
+      z-index: 2;
+    }
+    .char-name {
+      font-size: 18px;
+      font-weight: 900;
+      color: #ffffff;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+    .char-role {
+      font-size: 12px;
+      font-weight: 700;
+      margin-top: 4px;
+      letter-spacing: 0.5px;
+    }
+
+    /* 底部功能控制列 */
+    .cs-footer {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      height: 50px;
+    }
+    .cs-btn-back {
+      background: transparent;
+      border: 1px solid #435470;
+      color: #8a96a3;
+      padding: 10px 24px;
+      font-size: 15px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .cs-btn-back:hover { background: rgba(255,255,255,0.05); color: #fff; border-color: #fff; }
+    
+    .cs-btn-deploy {
+      background: #de9b35;
+      color: #0b0d11;
+      padding: 10px 45px;
+      font-size: 20px;
+      font-weight: 900;
+      border: none;
+      cursor: pointer;
+      letter-spacing: 2px;
+      transition: all 0.2s;
+      clip-path: polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+    }
+    .cs-btn-deploy:hover { background: #f5c400; transform: scale(1.02); }
+
+    /* ==========================================
+       CS2 頂部計分板與 HUD 等其他樣式 (維持不變)
+       ========================================== */
+    #cs2-top-hud {
+      position: absolute;
+      top: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      display: flex;
+      align-items: stretch;
+      background: rgba(16, 21, 26, 0.9);
+      border-bottom: 2px solid rgba(255,255,255,0.05);
+      backdrop-filter: blur(5px);
+      z-index: 100;
+      height: 50px;
+      border-radius: 0 0 8px 8px;
+    }
+    .hud-team { display: flex; align-items: center; padding: 0 25px; font-size: 20px; font-weight: 900; letter-spacing: 1px; }
+    .hud-ct { background: rgba(93, 121, 174, 0.2); color: #9bb7e8; border-right: 2px solid #5d79ae; }
+    .hud-t { background: rgba(222, 155, 53, 0.2); color: #e8b25d; border-left: 2px solid #de9b35; }
+    .hud-score { font-size: 32px; font-weight: 700; padding: 0 15px; display: flex; align-items: center; background: rgba(0,0,0,0.4); }
+    #score-ct { color: #5d79ae; }
+    #score-t { color: #de9b35; }
+    #cs2-timer { width: 90px; display: flex; justify-content: center; align-items: center; font-size: 24px; font-weight: 700; color: #eceff4; background: rgba(0,0,0,0.6); }
+
+    #cs2-left-hud { position: absolute; bottom: 20px; left: 20px; z-index: 100; display: flex; gap: 15px; pointer-events: none; }
+    .cs2-panel { background: rgba(12, 17, 21, 0.9); border-left: 4px solid #de9b35; padding: 8px 20px; display: flex; flex-direction: column; justify-content: center; min-width: 110px; backdrop-filter: blur(4px); }
+    .cs2-panel-label { font-size: 12px; color: #6c7987; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
+    .cs2-panel-val { font-size: 34px; font-weight: 900; color: #eceff4; line-height: 1; margin-top: 2px; }
+    .low-hp { border-left-color: #ff3b30 !important; }
+    .low-hp .cs2-panel-val { color: #ff3b30 !important; }
+
+    #cs2-right-hud { position: absolute; bottom: 20px; right: 20px; z-index: 100; display: flex; flex-direction: column; align-items: flex-end; gap: 5px; pointer-events: none; }
+    #cs2-weapon-name { color: #fff; font-size: 16px; font-weight: 900; background: rgba(222, 155, 53, 0.85); color: #10151a; padding: 4px 14px; border-radius: 2px; letter-spacing: 0.5px; }
+    .ammo-box { background: rgba(12, 17, 21, 0.9); border-right: 4px solid #de9b35; padding: 8px 25px; text-align: right; backdrop-filter: blur(4px); }
+    #ammo-main { font-size: 38px; font-weight: 900; color: #eceff4; line-height: 1; }
+    #ammo-reserve { font-size: 16px; color: #6c7987; font-weight: 700; margin-left: 5px; }
+
+    #cs2-killfeed { position: absolute; top: 65px; right: 20px; display: flex; flex-direction: column; gap: 6px; pointer-events: none; z-index: 100; }
+    .cs2-kf-item { background: rgba(15, 20, 26, 0.92); padding: 6px 14px; font-size: 15px; font-weight: 700; border-radius: 2px; border-right: 3px solid #ff9500; color: #eceff4; display: flex; align-items: center; gap: 8px; }
+    .kf-p-ct { color: #9bb7e8; }
+    .kf-p-t { color: #e8b25d; }
+    .kf-weapon { color: #ff9500; font-size: 12px; background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 2px; font-weight: 900; }
+
+    #tactical-alert { position: absolute; top: 80px; left: 50%; transform: translateX(-50%); background: rgba(30, 41, 59, 0.9); color: #ff9500; border: 1px solid #ff9500; padding: 6px 20px; font-size: 15px; font-weight: 700; letter-spacing: 1px; border-radius: 3px; display: none; z-index: 200; }
+
+    #game-container canvas { display: block; }
+
+    #cs2-end-screen { position: absolute; inset: 0; background: rgba(10,14,18,0.95); display: none; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; color: #eceff4; }
+    #end-title { font-size: 64px; font-weight: 900; letter-spacing: 2px; margin-bottom: 5px; }
+    #end-stats { font-size: 18px; line-height: 1.6; text-align: center; color: #8a96a3; margin-bottom: 35px; }
+    .cs2-btn { background: #de9b35; color: #10151a; padding: 12px 40px; font-size: 20px; font-weight: 700; border: none; cursor: pointer; border-radius: 2px; }
+    .cs2-btn:hover { background: #f5c400; }
+  </style>
+</head>
+<body>
+
+  <div id="app-container">
+    
+    <div id="cs2-lobby">
+      
+      <div id="lobby-step-1">
+        <div class="lobby-title">MATCH CONFIGURATION</div>
+        
+        <div class="lobby-row">
+          <label>PLAYER NAME (玩家名稱)</label>
+          <input type="text" id="lobby-player-name" class="lobby-input" value="YOU" maxlength="10">
+        </div>
+
+        <div class="lobby-row">
+          <label>TEAM (陣營選擇)</label>
+          <select id="lobby-player-team" class="lobby-input" onchange="updateTeamTheme()">
+            <option value="Blue">CT (警方)</option>
+            <option value="Red">T (匪方)</option>
+          </select>
+        </div>
+
+        <div class="lobby-row" style="border-top: 1px solid #2f3a4e; padding-top: 20px; margin-top: 10px;">
+          <label>TEAM SIZE (隊伍總人數)</label>
+          <input type="number" id="lobby-team-size" class="lobby-input" value="3" min="1" max="10">
+        </div>
+        
+        <div class="lobby-row">
+          <label>TARGET SCORE (獲勝目標)</label>
+          <input type="number" id="lobby-target-score" class="lobby-input" value="3" min="1" max="10">
+        </div>
+        
+        <button class="next-btn" onclick="goToCharSelect()">NEXT: CHOOSE CHARACTER</button>
+      </div>
+
+      <div id="lobby-step-2">
+        <div class="cs-header">
+          <div class="cs-title">CHOOSE YOUR OPERATIVE</div>
+          <div class="cs-subtitle" id="cs-team-display">COUNTER-TERRORISTS </div>
+        </div>
+
+        <div id="char-cards-container"></div>
+
+        <div class="cs-footer">
+          <button class="cs-btn-back" onclick="goToSettings()">◄ BACK TO CONFIG</button>
+          <button class="cs-btn-deploy" onclick="startMatch()">DEPLOY ►</button>
+        </div>
+      </div>
+
+    </div>
+
+    <div id="cs2-top-hud">
+      <div class="hud-team hud-ct">COUNTER-TERRORISTS</div>
+      <div class="hud-score" id="score-ct">0</div>
+      <div id="cs2-timer">03:00</div>
+      <div class="hud-score" id="score-t">0</div>
+      <div class="hud-team hud-t">TERRORISTS</div>
+    </div>
+
+    <div id="tactical-alert">WEAPON RESPAWNED</div>
+    <div id="cs2-killfeed"></div>
+
+    <div id="cs2-left-hud">
+      <div class="cs2-panel" id="panel-hp">
+        <div class="cs2-panel-label">+ HEALTH</div>
+        <div class="cs2-panel-val" id="val-hp">100</div>
+      </div>
+      <div class="cs2-panel">
+        <div class="cs2-panel-label">🛡️ SHIELD</div>
+        <div class="cs2-panel-val" id="val-armor">100</div>
+      </div>
+    </div>
+
+    <div id="cs2-right-hud">
+      <div id="cs2-weapon-name">GLOCK-18</div>
+      <div class="ammo-box">
+        <span id="ammo-main">12</span><span id="ammo-reserve">/ 30</span>
+      </div>
+    </div>
+
+    <div id="game-container"></div>
+    
+    <div id="cs2-end-screen">
+      <div id="end-title">COUNTER-TERRORISTS WIN</div>
+      <div id="end-stats"></div>
+      <button class="cs2-btn" onclick="location.reload()">RECONNECT MATCH</button>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/phaser@3.60.0/dist/phaser.min.js"></script>
+  <script>
+// ==========================================
+// 🌟 獨立外部資源配置外置區 (已規劃全陣營 1~4 號特寫照 Portrait 路徑)
+// ==========================================
+var ASSET_SETTINGS = {
+  useExternalAssets: true, 
+
+  images: {
+    bush: { key: 'ext_bush', path: 'assets/textures/bush.png', desc: '草叢' },
+    wall:     { key: 'ext_wall',     path: 'assets/textures/wall.png',    desc: '牆體材質' },
+    ground:   { key: 'ext_ground',   path: 'assets/textures/ground.png',  desc: '地面地板' },
+    
+    // 遊戲內：藍隊 4 種俯視材質
+    char_blue_1: { key: 'ext_cb1', path: 'assets/sprites/char_blue_1.png', desc: '藍隊俯視1' },
+    char_blue_2: { key: 'ext_cb2', path: 'assets/sprites/char_blue_2.png', desc: '藍隊俯視2' },
+    char_blue_3: { key: 'ext_cb3', path: 'assets/sprites/char_blue_3.png', desc: '藍隊俯視3' },
+    char_blue_4: { key: 'ext_cb4', path: 'assets/sprites/char_blue_4.png', desc: '藍隊俯視4' },
+    
+    // 遊戲內：紅隊 4 種俯視材質
+    char_red_1:  { key: 'ext_cr1', path: 'assets/sprites/char_red_1.png', desc: '紅隊俯視1' },
+    char_red_2:  { key: 'ext_cr2', path: 'assets/sprites/char_red_2.png', desc: '紅隊俯視2' },
+    char_red_3:  { key: 'ext_cr3', path: 'assets/sprites/char_red_3.png', desc: '紅隊俯視3' },
+    char_red_4:  { key: 'ext_cr4', path: 'assets/sprites/char_red_4.png', desc: '紅隊俯視4' },
+
+    // ✅ 本次核心優化：選角大廳的特寫照全路徑 (Portrait)
+    port_blue_1: { key: 'ext_pb1', path: 'assets/portraits/port_blue_1.png', desc: '藍隊特寫1' },
+    port_blue_2: { key: 'ext_pb2', path: 'assets/portraits/port_blue_2.png', desc: '藍隊特寫2' },
+    port_blue_3: { key: 'ext_pb3', path: 'assets/portraits/port_blue_3.png', desc: '藍隊特寫3' },
+    port_blue_4: { key: 'ext_pb4', path: 'assets/portraits/port_blue_4.png', desc: '藍隊特寫4' },
+
+    port_red_1:  { key: 'ext_pr1', path: 'assets/portraits/port_red_1.png', desc: '紅隊特寫1' },
+    port_red_2:  { key: 'ext_pr2', path: 'assets/portraits/port_red_2.png', desc: '紅隊特寫2' },
+    port_red_3:  { key: 'ext_pr3', path: 'assets/portraits/port_red_3.png', desc: '紅隊特寫3' },
+    port_red_4:  { key: 'ext_pr4', path: 'assets/portraits/port_red_4.png', desc: '紅隊特寫4' },
+
+    // 破壞物與道具等
+    crate_1:  { key: 'ext_crate_1', path: 'assets/textures/crate_1.png', desc: '破壞物1' },
+    crate_2:  { key: 'ext_crate_2', path: 'assets/textures/crate_2.png', desc: '破壞物2' },
+    crate_3:  { key: 'ext_crate_3', path: 'assets/textures/crate_3.png', desc: '破壞物3' },
+    crate_4:  { key: 'ext_crate_4', path: 'assets/textures/crate_4.png', desc: '破壞物4' },
+    bullet:   { key: 'ext_bullet',   path: 'assets/sprites/bullet.png',   desc: '子彈' },
+    flagBlue: { key: 'ext_flag_blue', path: 'assets/sprites/flag_blue.png',desc: '藍隊旗幟' },
+    flagRed:  { key: 'ext_flag_red',  path: 'assets/sprites/flag_red.png', desc: '紅隊旗幟' },
+
+    hand_pistol:{ key: 'ext_hand_pistol', path: 'assets/sprites/hand_pistol.png', desc: '手持：手槍' },
+    hand_ak47:  { key: 'ext_hand_ak47',   path: 'assets/sprites/hand_ak47.png',   desc: '手持：AK' },
+    hand_m4a4:  { key: 'ext_hand_m4a4',   path: 'assets/sprites/hand_m4a4.png',   desc: '手持：M4' },
+    hand_awp:   { key: 'ext_hand_awp',    path: 'assets/sprites/hand_awp.png',    desc: '手持：AWP' },
+    hand_negev: { key: 'ext_hand_negev',  path: 'assets/sprites/hand_negev.png',  desc: '手持：NEGEV' },
+
+    drop_ak47:  { key: 'ext_drop_ak47', path: 'assets/sprites/drop_ak47.png', desc: '掉落：AK' },
+    drop_m4a4:  { key: 'ext_drop_m4a4', path: 'assets/sprites/drop_m4a4.png', desc: '掉落：M4' },
+    drop_awp:   { key: 'ext_drop_awp',  path: 'assets/sprites/drop_awp.png',  desc: '掉落：AWP' },
+    drop_negev: { key: 'ext_drop_negev',path: 'assets/sprites/drop_negev.png',desc: '掉落：NEGEV' },
+    drop_heal:  { key: 'ext_drop_heal', path: 'assets/sprites/drop_heal.png', desc: '掉落：急救包' },
+    drop_shd:   { key: 'ext_drop_shd',  path: 'assets/sprites/drop_shd.png',  desc: '掉落：護盾' },
+
+    kf_pistol:  { key: 'ext_kf_pistol', path: 'assets/icons/kf_pistol.png', desc: '擊殺：手槍' },
+    kf_ak47:    { key: 'ext_kf_ak47',   path: 'assets/icons/kf_ak47.png',   desc: '擊殺：AK' },
+    kf_m4a4:    { key: 'ext_kf_m4a4',   path: 'assets/icons/kf_m4a4.png',   desc: '擊殺：M4' },
+    kf_awp:     { key: 'ext_kf_awp',    path: 'assets/icons/kf_awp.png',    desc: '擊殺：AWP' },
+    kf_negev:   { key: 'ext_kf_negev',  path: 'assets/icons/kf_negev.png',  desc: '擊殺：NEGEV' }
+  },
+
+  audio: {
+    shoot:      'assets/audio/shoot.mp3',      
+    hit:        'assets/audio/hit.mp3',        
+    kill:       'assets/audio/kill.mp3',       
+    pickup:     'assets/audio/pickup.mp3',     
+    alert:      'assets/audio/alert.mp3',      
+    flag_steal: 'assets/audio/flag_steal.mp3', 
+    flag_drop:  'assets/audio/flag_drop.mp3',  
+    flag_score: 'assets/audio/flag_score.mp3', 
+    start:      'assets/audio/start.mp3',      
+    end:        'assets/audio/end.mp3'         
+  }
+};
+
+// 全域儲存玩家最終選定的 Skin ID
+var globalSelectedSkinId = 1;
+
+// ==========================================
+// 音效引擎
+// ==========================================
+var audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+function playFx(scene, type) {
+  if (ASSET_SETTINGS.useExternalAssets) {
+    if (scene) {
+      if (scene.cache.audio.exists(type)) { scene.sound.play(type); return; }
+    } else {
+      if (ASSET_SETTINGS.audio[type]) {
+        var extAudio = new Audio(ASSET_SETTINGS.audio[type]);
+        extAudio.play().catch(function(e) { console.warn("外部音效播放受阻:", e); });
+        return;
+      }
+    }
+  }
+
+  // Synth 備援系統
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  var now = audioCtx.currentTime;
+  
+  if (type === 'shoot') {
+    osc.type = 'triangle'; osc.frequency.setValueAtTime(320, now); osc.frequency.exponentialRampToValueAtTime(40, now+0.08);
+    gain.gain.setValueAtTime(0.06, now); gain.gain.exponentialRampToValueAtTime(0.001, now+0.08);
+    osc.start(now); osc.stop(now+0.08);
+  } else if (type === 'hit') {
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(120, now);
+    gain.gain.setValueAtTime(0.05, now); gain.gain.linearRampToValueAtTime(0, now+0.04);
+    osc.start(now); osc.stop(now+0.04);
+  } else if (type === 'kill') {
+    osc.type = 'sine'; osc.frequency.setValueAtTime(600, now); osc.frequency.linearRampToValueAtTime(200, now+0.15);
+    gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.15);
+    osc.start(now); osc.stop(now+0.15);
+  } else if (type === 'pickup') {
+    osc.type = 'sine'; osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(660, now+0.06);
+    gain.gain.setValueAtTime(0.08, now); gain.gain.linearRampToValueAtTime(0, now+0.15);
+    osc.start(now); osc.stop(now+0.15);
+  } else if (type === 'alert') {
+    osc.type = 'square'; osc.frequency.setValueAtTime(880, now); osc.frequency.setValueAtTime(440, now+0.1);
+    gain.gain.setValueAtTime(0.05, now); gain.gain.linearRampToValueAtTime(0, now+0.2);
+    osc.start(now); osc.stop(now+0.2);
+  } else if (type === 'flag_steal') { 
+    osc.type = 'square'; osc.frequency.setValueAtTime(600, now); osc.frequency.setValueAtTime(800, now+0.1); osc.frequency.setValueAtTime(600, now+0.2);
+    gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.4);
+    osc.start(now); osc.stop(now+0.4);
+  } else if (type === 'flag_score') { 
+    osc.type = 'sine'; osc.frequency.setValueAtTime(440, now); osc.frequency.setValueAtTime(554, now+0.1); osc.frequency.setValueAtTime(659, now+0.2);
+    gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.5);
+    osc.start(now); osc.stop(now+0.5);
+  } else if (type === 'start') { 
+    osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(600, now+0.3);
+    gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.4);
+    osc.start(now); osc.stop(now+0.4);
+  } else if (type === 'end') { 
+    osc.type = 'sawtooth'; osc.frequency.setValueAtTime(200, now); osc.frequency.exponentialRampToValueAtTime(50, now+0.8);
+    gain.gain.setValueAtTime(0.1, now); gain.gain.linearRampToValueAtTime(0, now+0.8);
+    osc.start(now); osc.stop(now+0.8);
+  }
+}
+
+// ==========================================
+// 🧑 雙步驟大廳跳轉邏輯
+// ==========================================
+function updateTeamTheme() {
+    var team = document.getElementById('lobby-player-team').value;
+    document.getElementById('cs-team-display').innerText = (team === 'Blue') ? 'COUNTER-TERRORISTS ' : 'TERRORISTS ';
+    document.getElementById('cs-team-display').style.color = (team === 'Blue') ? '#9bb7e8' : '#e8b25d';
+}
+
+function goToCharSelect() {
+    playFx(null, 'pickup'); 
+    document.getElementById('lobby-step-1').style.display = 'none';
+    document.getElementById('lobby-step-2').style.display = 'flex';
+    buildCharCards();
+}
+
+function goToSettings() {
+    playFx(null, 'pickup');
+    document.getElementById('lobby-step-2').style.display = 'none';
+    document.getElementById('lobby-step-1').style.display = 'flex';
+}
+
+function buildCharCards() {
+    var team = document.getElementById('lobby-player-team').value;
+    var container = document.getElementById('char-cards-container');
+    container.innerHTML = ''; 
+    
+    // 依據陣營區分特寫照名稱與頭銜
+    var roles = ['ASSAULT / 突擊手', 'TACTICAL / 戰術官', 'SNIPER / 狙擊手', 'SUPPORT / 支援兵'];
+    var namesBlue = ['SEAL', 'SWAT', 'GIGN', 'SAS'];
+    var namesRed  = ['PHOENIX', 'ELITE', 'REBEL', 'SHADOW'];
+    var currentNames = (team === 'Blue') ? namesBlue : namesRed;
+    var themeColor = (team === 'Blue') ? '#5d79ae' : '#de9b35';
+    var glowColor = (team === 'Blue') ? 'rgba(93, 121, 174, 0.4)' : 'rgba(222, 155, 53, 0.4)';
+    
+    for(let i = 1; i <= 4; i++) {
+        let card = document.createElement('div');
+        card.className = 'char-card' + (i === globalSelectedSkinId ? ' selected' : '');
+        if (i === globalSelectedSkinId) { 
+            card.style.borderColor = themeColor; 
+            card.style.boxShadow = `0 0 20px ${glowColor}`;
+        }
+
+        card.onclick = function() {
+            playFx(null, 'hit');
+            globalSelectedSkinId = i;
+            // 重置所有卡片外觀
+            document.querySelectorAll('.char-card').forEach(c => { 
+                c.classList.remove('selected'); 
+                c.style.borderColor = '#2f3a4e'; 
+                c.style.boxShadow = 'none';
+            });
+            // 亮起當前點選探員
+            card.classList.add('selected');
+            card.style.borderColor = themeColor;
+            card.style.boxShadow = `0 0 20px ${glowColor}`;
+        };
+        
+        let port = document.createElement('div');
+        port.className = 'char-port';
+        
+        // 優先載入對應陣營的外部特寫照片
+        if (ASSET_SETTINGS.useExternalAssets) {
+            let imgObj = ASSET_SETTINGS.images[`port_${team.toLowerCase()}_${i}`];
+            if (imgObj) {
+                port.style.backgroundImage = `url('${imgObj.path}')`;
+            } else {
+                port.style.background = `linear-gradient(135deg, #10151d, ${themeColor}44)`;
+            }
+        } else {
+            port.style.background = `linear-gradient(135deg, #10151d, ${themeColor}44)`;
+        }
+        
+        let nameBox = document.createElement('div');
+        nameBox.className = 'char-name-box';
+        nameBox.innerHTML = `
+            <div class="char-name">${currentNames[i-1]}</div>
+            <div class="char-role" style="color: ${themeColor}">${roles[i-1]}</div>
+        `;
+        
+        card.appendChild(port);
+        card.appendChild(nameBox);
+        container.appendChild(card);
+    }
+}
+
+// ==========================================
+// 數據與設定
+// ==========================================
+var WEAPONS = {
+  pistol: { name: 'Pistol',     dmg: 15, cd: 350, ammo: 12, maxAmmo: 12, speed: 500, spread: 0.02 },
+  ak47:   { name: 'AK-47',      dmg: 35, cd: 130, ammo: 30, maxAmmo: 30, speed: 550, spread: 0.08 },
+  m4a4:   { name: 'M4A4',       dmg: 26, cd: 100, ammo: 30, maxAmmo: 30, speed: 580, spread: 0.04 },
+  awp:    { name: 'AWP',        dmg: 100,cd: 1400,ammo: 5,  maxAmmo: 5,  speed: 800, spread: 0.005},
+  negev:  { name: 'NEGEV',      dmg: 16, cd: 60,  ammo: 100,maxAmmo: 100,speed: 480, spread: 0.16 }
+};
+
+var GAME = { W: 1000, H: 600, WORLD_W: 1800, WORLD_H: 1200 };
+var DEPTH = { BG: 0, MAP: 10, BUSH: 20, ITEM: 30, PLAYER: 40, FX: 50 };
+
+var Bus = new Phaser.Events.EventEmitter();
+var EV = { HUD: 'hud', KILL: 'kill', ALERT: 'alert' };
+
+var MAP = {
+  bases: {
+    Blue: { x: 0, y: 0, w: 200, h: 1200, spawnX: 100, spawnY: 600 },
+    Red:  { x: 1600, y: 0, w: 200, h: 1200, spawnX: 1700, spawnY: 600 }
+  },
+  flags: [
+    { team: 'Blue', id: 'Alpha', x: 300, y: 350 }, { team: 'Blue', id: 'Beta',  x: 300, y: 850 },
+    { team: 'Red',  id: 'Alpha', x: 1500, y: 350 }, { team: 'Red',  id: 'Beta',  x: 1500, y: 850 }
+  ],
+  walls: [
+    {x: 900, y: 350, w: 80, h: 250}, {x: 900, y: 850, w: 80, h: 250},
+    {x: 900, y: 600, w: 300, h: 60}, {x: 550, y: 250, w: 60, h: 300},
+    {x: 1250, y: 250, w: 60, h: 300}, {x: 900, y: 100, w: 500, h: 40},
+    {x: 550, y: 950, w: 60, h: 300}, {x: 1250, y: 950, w: 60, h: 300},
+    {x: 900, y: 1100, w: 500, h: 40}, {x: 420, y: 600, w: 60, h: 300},
+    {x: 1380, y: 600, w: 60, h: 300}
+  ],
+  bushes: [{x: 680, y: 600, r: 60}, {x: 1120, y: 600, r: 60}],
+  spawns: [
+    { x: 900, y: 160 }, { x: 900, y: 1040 }, { x: 700, y: 600 }, 
+    { x: 1100, y: 600 }, { x: 350, y: 180 }, { x: 350, y: 1020 },
+    { x: 1450, y: 180 }, { x: 1450, y: 1020 }, { x: 680, y: 160 }, 
+    { x: 1120, y: 160 }, { x: 680, y: 1040 }
+  ]
+};
+
+// ==========================================
+// 🧑 角色主實體
+// ==========================================
+class Character {
+  constructor(scene, team, isPlayer, id, skinId) {
+    this.scene = scene;
+    this.team = team;
+    this.isPlayer = isPlayer;
+    this.id = id;
+    this.skinId = skinId || 1; 
+    
+    this.kills = 0; this.deaths = 0;
+    this.currentWeapon = 'pistol';
+    
+    this.sprite = scene.physics.add.sprite(-1000, -1000, 'blank').setDepth(DEPTH.PLAYER);
+    this.sprite.setData('ctrl', this);
+    
+    this.weaponSprite = scene.add.sprite(-1000, -1000, 'blank').setDepth(DEPTH.PLAYER + 1);
+    this.weaponSprite.setVisible(false);
+
+    scene.grpPlayers.add(this.sprite);
+    
+    this.isAlive = false;
+    this.hasFlag = null; 
+    this.ammo = 12; this.lastFire = 0; this.isReloading = false;
+    this.shieldTimer = 0;
+
+    if (this.isPlayer) {
+      this.keys = scene.input.keyboard.addKeys('W,A,S,D,R');
+      var self = this;
+      this._onPointerDown = function(){ self.isFiring = true; };
+      this._onPointerUp   = function(){ self.isFiring = false; };
+      scene.input.on('pointerdown', this._onPointerDown);
+      scene.input.on('pointerup',   this._onPointerUp);
+    }
+  }
+
+  spawn() {
+    this.currentWeapon = 'pistol';
+    var wDef = WEAPONS[this.currentWeapon];
+    this.hp = 100; this.maxHp = 100; this.speed = 220;
+    this.isAlive = true; this.ammo = wDef.maxAmmo; this.hasFlag = null;
+    this.shieldTimer = 0; this.isFiring = false;
+
+    var base = MAP.bases[this.team];
+    var rx = base.spawnX;
+    var ry = Phaser.Math.Between(250, 950);
+
+    this.sprite.enableBody(true, rx, ry, true, true);
+    if (this.weaponSprite) { this.weaponSprite.setVisible(false); }
+
+    this._updateTexture();
+
+    if (ASSET_SETTINGS.useExternalAssets) {
+      var radius = this.sprite.displayWidth / 2;
+      this.sprite.body.setCircle(radius > 0 ? radius : 16);
+    } else {
+      this.sprite.body.setCircle(16, 25-16, 25-16);
+    }
+    
+    this.sprite.setCollideWorldBounds(true).setAlpha(1);
+    if (this.isPlayer) Bus.emit(EV.HUD);
+  }
+
+  _updateTexture() {
+    if (ASSET_SETTINGS.useExternalAssets) {
+      var tName = 'char_' + this.team.toLowerCase() + '_' + this.skinId;
+      var extKey = ASSET_SETTINGS.images[tName] ? ASSET_SETTINGS.images[tName].key : ASSET_SETTINGS.images['char_' + this.team.toLowerCase() + '_1'].key;
+      this.sprite.setTexture(extKey);
+      
+      if (this.sprite.width <= 16) { this.sprite.setScale(2); } else { this.sprite.setScale(1); }
+      
+      var handImgObj = ASSET_SETTINGS.images['hand_' + this.currentWeapon];
+      if (handImgObj) {
+          this.weaponSprite.setTexture(handImgObj.key);
+          this.weaponSprite.setVisible(true);
+          if (this.weaponSprite.width <= 16) { this.weaponSprite.setScale(2); } else { this.weaponSprite.setScale(1); }
+      }
+    } else {
+      var gName = 'tex_' + this.team + '_s' + this.skinId + '_' + this.currentWeapon;
+      if (!this.scene.textures.exists(gName)) {
+        var gfx = this.scene.add.graphics();
+        var baseColor = this.team === 'Blue' ? 0x5d79ae : 0xde9b35;
+        gfx.lineStyle(3, baseColor, 1);
+        
+        var innerColor;
+        if(this.skinId === 1) innerColor = 0x1b222b;
+        else if(this.skinId === 2) innerColor = 0x333f51;
+        else if(this.skinId === 3) innerColor = 0x242d38;
+        else innerColor = 0x415066;
+        
+        gfx.fillStyle(innerColor, 1);
+        gfx.fillCircle(25, 25, 15);
+        gfx.strokeCircle(25, 25, 15);
+        
+        gfx.fillStyle(baseColor, 1);
+        if(this.skinId === 2) { gfx.fillRect(20, 20, 10, 10); } 
+        else if(this.skinId === 3) { gfx.fillTriangle(25, 15, 17, 25, 33, 25); } 
+        else if(this.skinId === 4) { gfx.fillCircle(20, 25, 3); gfx.fillCircle(30, 25, 3); } 
+        
+        gfx.fillStyle(0x4f5b66, 1);
+        var len = this.currentWeapon === 'awp' ? 32 : this.currentWeapon === 'negev' ? 26 : 22;
+        gfx.fillRect(25, 21, len, 8);
+        gfx.generateTexture(gName, 55, 55);
+        gfx.destroy();
+      }
+      this.sprite.setTexture(gName);
+      this.sprite.setScale(1);
+      this.weaponSprite.setVisible(false); 
+    }
+  }
+
+  update(time, delta) {
+    if (!this.isAlive) { 
+        this.sprite.setVelocity(0, 0); 
+        this.weaponSprite.setVisible(false);
+        return; 
+    }
+    if (this.shieldTimer > 0) this.shieldTimer -= delta;
+
+    if (this.isPlayer) {
+      this._handleInput();
+      this._handleMovement();
+    }
+    
+    if (ASSET_SETTINGS.useExternalAssets && this.weaponSprite.visible) {
+        var GUN_OFFSET_DIST = 18; 
+        var rot = this.sprite.rotation;
+        var offX = Math.cos(rot) * GUN_OFFSET_DIST;
+        var offY = Math.sin(rot) * GUN_OFFSET_DIST;
+        this.weaponSprite.setPosition(this.sprite.x + offX, this.sprite.y + offY);
+        this.weaponSprite.setRotation(rot);
+    }
+    
+    var wDef = WEAPONS[this.currentWeapon];
+    if (this.isFiring && !this.isReloading && time - this.lastFire > wDef.cd) {
+      if (this.ammo > 0) {
+        this.lastFire = time; this.ammo--;
+        this._fireBullet(wDef);
+      } else {
+        this._reload();
+      }
+    }
+    
+    if (this.hasFlag) {
+      var myBase = MAP.bases[this.team];
+      if (this.sprite.x > myBase.x && this.sprite.x < myBase.x + myBase.w &&
+          this.sprite.y > myBase.y && this.sprite.y < myBase.y + myBase.h) {
+        this.scene.scoreFlag(this);
+      }
+    }
+  }
+
+  _handleInput() {
+    if (Phaser.Input.Keyboard.JustDown(this.keys.R)) this._reload();
+    var ptr = this.scene.input.activePointer;
+    var worldX = ptr.x + this.scene.cameras.main.scrollX;
+    var worldY = ptr.y + this.scene.cameras.main.scrollY;
+    this.sprite.setRotation(Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, worldX, worldY));
+  }
+
+  _handleMovement() {
+    var vx = 0, vy = 0;
+    if (this.keys.A.isDown) vx = -1; else if (this.keys.D.isDown) vx = 1;
+    if (this.keys.W.isDown) vy = -1; else if (this.keys.S.isDown) vy = 1;
+
+    var curSpeed = this.speed;
+    if (this.hasFlag) curSpeed *= 0.8; 
+
+    if (vx !== 0 && vy !== 0) { vx *= 0.707; vy *= 0.707; }
+    this.sprite.setVelocity(vx * curSpeed, vy * curSpeed);
+  }
+
+  _fireBullet(wDef) {
+    playFx(this.scene, 'shoot');
+    var angle = this.sprite.rotation + (Math.random() - 0.5) * wDef.spread;
+    var bx = this.sprite.x + Math.cos(angle) * 25;
+    var by = this.sprite.y + Math.sin(angle) * 25;
+
+    var bKey = ASSET_SETTINGS.useExternalAssets ? ASSET_SETTINGS.images.bullet.key : 'bullet_tex';
+    var b = this.scene.grpBullets.get(bx, by, bKey);
+    if (!b) return; 
+    b.setActive(true).setVisible(true).setDepth(DEPTH.PLAYER - 1).setRotation(angle);
+    b.enableBody(true, bx, by, true, true);
+    b.setVelocity(Math.cos(angle) * wDef.speed, Math.sin(angle) * wDef.speed);
+    b.setData('owner', this).setData('dmg', wDef.dmg).setData('born', this.scene.time.now);
+
+    if (this.isPlayer) Bus.emit(EV.HUD);
+  }
+
+  _reload() {
+    var wDef = WEAPONS[this.currentWeapon];
+    if (this.isReloading || this.ammo >= wDef.maxAmmo) return;
+    this.isReloading = true;
+    if (this.isPlayer) Bus.emit(EV.HUD);
+    var self = this;
+    this.scene.time.delayedCall(1200, function(){
+      if (!self.isAlive || !self.scene || self.scene.gameOver) { self.isReloading = false; return; }
+      self.ammo = wDef.maxAmmo; self.isReloading = false;
+      if (self.isPlayer) Bus.emit(EV.HUD);
+    });
+  }
+
+  pickWeapon(wKey) {
+    this.currentWeapon = wKey;
+    this.ammo = WEAPONS[wKey].maxAmmo;
+    this.isReloading = false;
+    this._updateTexture(); 
+    playFx(this.scene, 'pickup');
+    if (this.isPlayer) Bus.emit(EV.HUD);
+  }
+
+  takeDamage(amount, attacker) {
+    if (!this.isAlive) return;
+    playFx(this.scene, 'hit');
+    var finalDamage = (this.shieldTimer > 0) ? Math.ceil(amount * 0.5) : amount;
+    this.hp -= finalDamage;
+    this.sprite.setTint(0xff3b30);
+    var self = this;
+    this.scene.time.delayedCall(60, function(){
+      if (self.sprite && self.sprite.active) self.sprite.clearTint();
+    });
+
+    if (this.isPlayer) Bus.emit(EV.HUD);
+    if (this.hp <= 0) this.die(attacker);
+  }
+
+  die(killer) {
+    this.isAlive = false; this.deaths++;
+    if (killer) {
+      killer.kills++; playFx(this.scene, 'kill');
+      Bus.emit(EV.KILL, { k: killer.id, v: this.id, wKey: killer.currentWeapon, wName: WEAPONS[killer.currentWeapon].name, kt: killer.team });
+    }
+
+    if (this.hasFlag) {
+      this.scene.dropFlag(this.hasFlag);
+      this.hasFlag = null;
+    }
+
+    if (this.sprite && this.sprite.active) { this.sprite.clearTint(); }
+    this.sprite.disableBody(true, true);
+    this.weaponSprite.setVisible(false);
+
+    if (this.isPlayer) Bus.emit(EV.HUD);
+
+    var self = this;
+    this.scene.time.delayedCall(3000, function(){
+      if (!self.scene || self.scene.gameOver) return;
+      self.spawn();
+    });
+  }
+}
+
+// ==========================================
+// 🤖 戰術 AI 核心
+// ==========================================
+class Bot extends Character {
+  constructor(scene, team, id, skinId) { 
+    super(scene, team, false, id, skinId); 
+    this.aiTargetX = 0; this.aiTargetY = 0;
+    this.nextDecisionTime = 0; this.nextCombatScanTime = 0; 
+    this.cachedTargetEnemy = null; 
+    this.lastX = 0; this.lastY = 0;
+    this.stuckTimer = 0; this.bypassVx = 0; this.bypassVy = 0;
+  }
+  
+  update(time, delta) {
+    super.update(time, delta);
+    if (!this.isAlive) return;
+
+    if (time > this.nextDecisionTime) {
+      this.nextDecisionTime = time + 250;
+      this._evaluateTacticalGoal();
+    }
+
+    if (time > this.nextCombatScanTime) {
+      this.nextCombatScanTime = time + 150;
+      this._combatScanCache();
+    }
+
+    var distToGoal = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, this.aiTargetX, this.aiTargetY);
+    var vx = 0, vy = 0;
+
+    if (distToGoal > 30) {
+      var angle = Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, this.aiTargetX, this.aiTargetY);
+      vx = Math.cos(angle) * this.speed; vy = Math.sin(angle) * this.speed;
+    }
+
+    var actualMoved = Phaser.Math.Distance.Between(this.sprite.x, this.sprite.y, this.lastX, this.lastY);
+    this.lastX = this.sprite.x; this.lastY = this.sprite.y;
+
+    if (this.stuckTimer > 0) {
+      this.stuckTimer -= delta;
+      vx = this.bypassVx; vy = this.bypassVy;
+    } else if (actualMoved < 0.5 && (vx !== 0 || vy !== 0)) {
+      this.stuckTimer = 400;
+      if (this.sprite.body.blocked.left || this.sprite.body.blocked.right) {
+        this.bypassVx = this.sprite.body.blocked.left ? 50 : -50; 
+        this.bypassVy = this.aiTargetY > this.sprite.y ? this.speed : -this.speed;
+      } else {
+        this.bypassVx = this.aiTargetX > this.sprite.x ? this.speed : -this.speed;
+        this.bypassVy = this.sprite.body.blocked.up ? 50 : -50;
+      }
+      vx = this.bypassVx; vy = this.bypassVy;
+    }
+
+    if (this.cachedTargetEnemy && this.cachedTargetEnemy.isAlive) {
+      this.sprite.rotation = Phaser.Math.Angle.RotateTo(this.sprite.rotation, Phaser.Math.Angle.Between(this.sprite.x, this.sprite.y, this.cachedTargetEnemy.sprite.x, this.cachedTargetEnemy.sprite.y), 0.15);
+      var wDef = WEAPONS[this.currentWeapon];
+      if (time - this.lastFire > wDef.cd * 1.1 && !this.isReloading) {
+        if (this.ammo > 0) { this.lastFire = time; this.ammo--; this._fireBullet(wDef); } else { this._reload(); }
+      }
+    } else if (vx !== 0 || vy !== 0) {
+      this.sprite.rotation = Phaser.Math.Angle.RotateTo(this.sprite.rotation, Math.atan2(vy, vx), 0.1);
+    }
+
+    if (vx !== 0 || vy !== 0) {
+      if (this.hasFlag) { vx *= 0.8; vy *= 0.8; }
+      this.sprite.setVelocity(vx, vy);
+    } else { this.sprite.setVelocity(0, 0); }
+  }
+
+  _evaluateTacticalGoal() {
+    var self = this;
+    var enemyTeam = this.team === 'Blue' ? 'Red' : 'Blue';
+
+    if (this.hasFlag) {
+      var base = MAP.bases[this.team];
+      this.aiTargetX = base.spawnX; this.aiTargetY = this.sprite.y; 
+      return;
+    }
+
+    var myFlags = this.scene.flagsData.filter(function(f){ return f.team === self.team; });
+    var dangerousFlag = null;
+    myFlags.forEach(function(f){ if (f.status === 'stolen' || f.status === 'dropped') dangerousFlag = f; });
+
+    if (dangerousFlag) {
+      if (dangerousFlag.status === 'stolen' && dangerousFlag.carrier) {
+        this.aiTargetX = dangerousFlag.carrier.sprite.x; this.aiTargetY = dangerousFlag.carrier.sprite.y;
+      } else if (dangerousFlag.status === 'dropped') {
+        this.aiTargetX = dangerousFlag.sprite.x; this.aiTargetY = dangerousFlag.sprite.y;
+      }
+      return;
+    }
+
+    var enemyFlags = this.scene.flagsData.filter(function(f){ return f.team === enemyTeam; });
+    var targetFlag = null; var minDist = 999999;
+
+    enemyFlags.forEach(function(f){
+      if (f.status === 'home' || f.status === 'dropped') {
+        var d = Phaser.Math.Distance.Between(self.sprite.x, self.sprite.y, f.sprite.x, f.sprite.y);
+        if (d < minDist) { minDist = d; targetFlag = f; }
+      }
+    });
+
+    if (targetFlag) {
+      this.aiTargetX = targetFlag.sprite.x; this.aiTargetY = targetFlag.sprite.y;
+    } else {
+      this.aiTargetX = this.scene.player.sprite.x; this.aiTargetY = this.scene.player.sprite.y;
+    }
+  }
+
+  _combatScanCache() {
+    var self = this; var closestEnemy = null; var minDist = 420;
+    var children = this.scene.grpPlayers.getChildren();
+    for (var i = 0; i < children.length; i++) {
+      var pSprite = children[i];
+      var ctrl = pSprite.getData('ctrl');
+      if (ctrl && ctrl.isAlive && ctrl.team !== self.team) {
+        var d = Phaser.Math.Distance.Between(self.sprite.x, self.sprite.y, pSprite.x, pSprite.y);
+        if (d < minDist) { minDist = d; closestEnemy = ctrl; }
+      }
+    }
+    this.cachedTargetEnemy = closestEnemy;
+  }
+}
+
+// ==========================================
+// 核心主場景
+// ==========================================
+class GameScene extends Phaser.Scene {
+  constructor() { super({ key: 'GameScene' }); }
+
+  preload() {
+    var self = this;
+    if (ASSET_SETTINGS.useExternalAssets) {
+      Object.values(ASSET_SETTINGS.images).forEach(function(img) { self.load.image(img.key, img.path); });
+      Object.entries(ASSET_SETTINGS.audio).forEach(function(entry) { self.load.audio(entry[0], entry[1]); });
+    }
+  }
+
+  create() {
+    var self = this;
+    Bus.removeAllListeners();
+
+    var makeTex = function(k, w, h, c) {
+      var g = self.make.graphics({add:false}); g.fillStyle(c); g.fillRect(0,0,w,h); g.generateTexture(k,w,h); g.destroy();
+    };
+    makeTex('bullet_tex', 6, 6, 0xffffff); makeTex('blank', 1, 1, 0x000000);
+
+    // 材質生成
+    var gGround = self.make.graphics({add:false});
+    gGround.fillStyle(0x0e1318, 1); gGround.fillRect(0, 0, 128, 128); gGround.lineStyle(1, 0x1c2530, 1);
+    for (var gx = 0; gx <= 128; gx += 32) { gGround.beginPath(); gGround.moveTo(gx, 0); gGround.lineTo(gx, 128); gGround.strokePath(); }
+    for (var gy = 0; gy <= 128; gy += 32) { gGround.beginPath(); gGround.moveTo(0, gy); gGround.lineTo(128, gy); gGround.strokePath(); }
+    gGround.lineStyle(1, 0x151d26, 0.5); gGround.beginPath(); gGround.moveTo(0, 128); gGround.lineTo(128, 0); gGround.strokePath();
+    gGround.generateTexture('tex_ground_large', 128, 128); gGround.destroy();
+
+    var gWall = self.make.graphics({add:false});
+    gWall.fillStyle(0x181e26, 1); gWall.fillRect(0, 0, 128, 128); gWall.lineStyle(2, 0x2a3441, 1);
+    for (var wy = 0; wy <= 128; wy += 32) { gWall.beginPath(); gWall.moveTo(0, wy); gWall.lineTo(128, wy); gWall.strokePath(); }
+    for (var wRow = 0; wRow < 4; wRow++) {
+      var offsetX = (wRow % 2 === 0) ? 0 : 32;
+      for (var col = offsetX; col <= 128; col += 64) { gWall.beginPath(); gWall.moveTo(col, wRow * 32); gWall.lineTo(col, wRow * 32 + 32); gWall.strokePath(); }
+    }
+    gWall.lineStyle(1, 0x11161b, 0.8); gWall.beginPath(); gWall.moveTo(0, 128); gWall.lineTo(128, 0); gWall.strokePath();
+    gWall.generateTexture('tex_wall_large', 128, 128); gWall.destroy();
+
+    var gGuide = self.make.graphics({add:false});
+    gGuide.fillStyle(0xffffff, 1); gGuide.fillTriangle(15, 30, 5, 5, 25, 5); 
+    gGuide.generateTexture('tex_guide_arrow', 30, 30); gGuide.destroy();
+
+    var makeCrateTex = function(k, cFill, cLine, type) {
+        var g = self.make.graphics({add:false});
+        g.fillStyle(cFill); g.fillRect(0, 0, 40, 40); g.lineStyle(3, cLine); g.strokeRect(1, 1, 38, 38); g.lineStyle(2, cLine);
+        if(type === 1) { g.beginPath(); g.moveTo(0,0); g.lineTo(40,40); g.strokePath(); } 
+        if(type === 2) { g.strokeRect(8,8,24,24); } 
+        if(type === 3) { g.beginPath(); g.moveTo(20,0); g.lineTo(20,40); g.strokePath(); } 
+        if(type === 4) { g.fillCircle(20,20,8); } 
+        g.generateTexture(k, 40, 40); g.destroy();
+    }
+    makeCrateTex('tex_crate_1', 0x8b5a2b, 0x5c3a21, 1); makeCrateTex('tex_crate_2', 0x555555, 0x333333, 2);
+    makeCrateTex('tex_crate_3', 0x4a5d23, 0x2e3b16, 3); makeCrateTex('tex_crate_4', 0x664422, 0x332211, 4);
+
+    var buildTacticalTexture = function(key, outerColor, innerColor, isCircle, innerType) {
+      var g = self.make.graphics({add:false}); g.lineStyle(2, 0x11161b, 1);
+      if (isCircle) {
+        g.fillStyle(outerColor, 1); g.fillCircle(15, 15, 13); g.strokeCircle(15, 15, 13); g.fillStyle(innerColor, 1);
+        if (innerType === 'dot') g.fillCircle(15, 15, 5);
+        else if (innerType === 'cross') { g.fillRect(13, 7, 4, 16); g.fillRect(7, 13, 16, 4); }
+        else if (innerType === 'square') g.fillRect(11, 11, 8, 8);
+      } else {
+        g.fillStyle(0x1e293b, 1); g.fillRect(2, 2, 26, 26); g.lineStyle(2, outerColor, 1); g.strokeRect(2, 2, 26, 26); g.fillStyle(innerColor, 1);
+        if (innerType === 'plus') { g.fillRect(13, 6, 4, 18); g.fillRect(6, 13, 18, 4); }
+        else if (innerType === 'shield') { g.fillTriangle(15, 6, 7, 13, 23, 13); g.fillRect(9, 13, 12, 10); }
+      }
+      g.generateTexture(key, 30, 30); g.destroy();
+    };
+
+    buildTacticalTexture('wp_ak47',  0xd97706, 0xfef08a, true, 'cross');  
+    buildTacticalTexture('wp_m4a4',  0x2563eb, 0x67e8f9, true, 'cross');  
+    buildTacticalTexture('wp_awp',   0x7c3aed, 0xfacc15, true, 'dot');    
+    buildTacticalTexture('wp_negev', 0x059669, 0xffffff, true, 'square'); 
+    buildTacticalTexture('bx_health', 0x10b981, 0x10b981, false, 'plus');  
+    buildTacticalTexture('bx_shield', 0x06b6d4, 0x06b6d4, false, 'shield'); 
+
+    this.score = { Blue: 0, Red: 0 };
+    this.timeLeft = 180;
+    this.gameOver = false;
+
+    this.physics.world.setBounds(0, 0, GAME.WORLD_W, GAME.WORLD_H);
+
+    this.grpWalls = this.physics.add.staticGroup(); this.grpBushes = this.physics.add.staticGroup();
+    this.grpPlayers = this.physics.add.group(); this.grpBullets = this.physics.add.group({ maxSize: 200, runChildUpdate: false });
+    this.grpFlags = this.physics.add.group(); this.grpPickups = this.physics.add.group(); 
+    this.grpBreakables = this.physics.add.staticGroup(); 
+
+    this.guidanceGraphics = this.add.graphics().setDepth(DEPTH.FX + 10);
+
+    this._buildMap();
+    this._spawnBreakableObjects(); 
+
+    // 依據 MATCH_CONFIG 產生玩家與機器人
+    this.player = new Character(this, MATCH_CONFIG.playerTeam, true, MATCH_CONFIG.playerName, MATCH_CONFIG.playerSkin);
+    this.bots = [];
+    var enemyTeam = MATCH_CONFIG.playerTeam === 'Blue' ? 'Red' : 'Blue';
+    
+    for (var i = 0; i < MATCH_CONFIG.teamSize - 1; i++) {
+      var randSkin = Phaser.Math.Between(1, 4); 
+      this.bots.push(new Bot(this, MATCH_CONFIG.playerTeam, 'BOT_' + MATCH_CONFIG.playerTeam[0] + (i + 1), randSkin));
+    }
+    for (var j = 0; j < MATCH_CONFIG.teamSize; j++) {
+      var randSkin = Phaser.Math.Between(1, 4); 
+      this.bots.push(new Bot(this, enemyTeam, 'BOT_' + enemyTeam[0] + (j + 1), randSkin));
+    }
+    
+    this.player.spawn();
+    this.bots.forEach(function(b){ b.spawn(); });
+
+    this.cameras.main.setBounds(0, 0, GAME.WORLD_W, GAME.WORLD_H);
+    this.cameras.main.startFollow(this.player.sprite, true, 0.1, 0.1);
+
+    this._setupPhysics(); this._bindDOMEvents(); this._initFixedWeaponSpawns(); 
+
+    Bus.emit(EV.HUD);
+    
+    this._endGameScheduled = false;
+    this._matchTimer = this.time.addEvent({
+      delay: 1000, loop: true,
+      callback: function(){
+        if (self.gameOver || self._endGameScheduled) return;
+        self.timeLeft--; Bus.emit(EV.HUD); 
+        if (self.timeLeft <= 0) { self._endGameScheduled = true; self._endGame(); }
+      }
+    });
+
+    this.events.once('shutdown', function(){ Bus.removeAllListeners(); });
+  }
+
+  _buildMap() {
+    if (ASSET_SETTINGS.useExternalAssets && this.textures.exists(ASSET_SETTINGS.images.ground.key)) {
+      this.add.tileSprite(GAME.WORLD_W/2, GAME.WORLD_H/2, GAME.WORLD_W, GAME.WORLD_H, ASSET_SETTINGS.images.ground.key).setDepth(DEPTH.BG);
+    } else { this.add.tileSprite(GAME.WORLD_W/2, GAME.WORLD_H/2, GAME.WORLD_W, GAME.WORLD_H, 'tex_ground_large').setDepth(DEPTH.BG); }
+    
+    var bBlue = MAP.bases.Blue, bRed = MAP.bases.Red;
+    this.add.rectangle(bBlue.x + bBlue.w/2, bBlue.y + bBlue.h/2, bBlue.w, bBlue.h, 0x5d79ae, 0.05).setDepth(DEPTH.MAP);
+    this.add.rectangle(bRed.x + bRed.w/2, bRed.y + bRed.h/2, bRed.w, bRed.h, 0xde9b35, 0.05).setDepth(DEPTH.MAP);
+
+    var self = this;
+    MAP.walls.forEach(function(w){
+      var texKey = ASSET_SETTINGS.useExternalAssets ? ASSET_SETTINGS.images.wall.key : 'tex_wall_large';
+      var r = self.add.tileSprite(w.x, w.y, w.w, w.h, texKey).setDepth(DEPTH.MAP);
+      self.add.rectangle(w.x, w.y, w.w, w.h).setStrokeStyle(3, 0x4f5b66).setDepth(DEPTH.MAP+1);
+      self.physics.add.existing(r, true); self.grpWalls.add(r);
+    });
+    
+MAP.bushes.forEach(function(b){
+  var bushImg;
+
+  if (ASSET_SETTINGS.useExternalAssets && self.textures.exists(ASSET_SETTINGS.images.bush.key)) {
+    // ✅ 使用外部圖片
+    bushImg = self.add.image(b.x, b.y, ASSET_SETTINGS.images.bush.key)
+      .setDisplaySize(b.r * 2, b.r * 2)   // 依草叢半徑縮放
+      .setAlpha(0.85)
+      .setDepth(DEPTH.BUSH);
+  } else {
+    // ⬇ Fallback：維持原本的純色圓形
+    bushImg = self.add.circle(b.x, b.y, b.r, 0x222c20, 0.5).setDepth(DEPTH.BUSH);
+    bushImg.setStrokeStyle(1, 0x3b4d37);
+  }
+
+  // 碰撞體保持圓形（不管用圖還是純色都需要）
+  self.physics.add.existing(bushImg, true);
+  bushImg.body.setCircle(b.r, -b.r, -b.r); // image 原點在左上，要偏移
+  self.grpBushes.add(bushImg);
+});
+
+    this.flagsData = [];
+    MAP.flags.forEach(function(fDef){
+      var fSprite = self.physics.add.sprite(fDef.x, fDef.y, 'blank').setDepth(DEPTH.ITEM);
+      var tName;
+      if (ASSET_SETTINGS.useExternalAssets) {
+        tName = fDef.team === 'Blue' ? ASSET_SETTINGS.images.flagBlue.key : ASSET_SETTINGS.images.flagRed.key;
+        fSprite.setTexture(tName); if (fSprite.width <= 16) fSprite.setScale(1.5); 
+      } else {
+        var gfx = self.add.graphics();
+        gfx.fillStyle(fDef.team === 'Blue' ? 0x5d79ae : 0xde9b35, 1); gfx.fillRect(3, 3, 18, 18);
+        gfx.lineStyle(2, 0xffffff, 1); gfx.strokeRect(1, 1, 22, 22);
+        tName = 'tex_flag_' + fDef.team + '_' + fDef.id;
+        gfx.generateTexture(tName, 24, 24); gfx.destroy(); fSprite.setTexture(tName);
+      }
+      
+      var fObj = { team: fDef.team, id: fDef.id, homeX: fDef.x, homeY: fDef.y, sprite: fSprite, status: 'home', carrier: null, timer: null };
+      fSprite.setData('info', fObj); self.grpFlags.add(fSprite); self.flagsData.push(fObj);
+      self.add.text(fDef.x, fDef.y - 22, fDef.team + ' ' + fDef.id, {fontFamily:'Rajdhani', fontSize:'14px', fill:'#8a96a3', fontStyle:'900'}).setOrigin(0.5);
+    });
+  }
+
+  _spawnBreakableObjects() {
+    var numCrates = 25; var safeDist = 30;  
+    for (var i = 0; i < numCrates; i++) {
+        var rx, ry, valid = false, attempts = 0;
+        while (!valid && attempts < 50) {
+            rx = Phaser.Math.Between(200, GAME.WORLD_W - 200); ry = Phaser.Math.Between(200, GAME.WORLD_H - 200); valid = true;
+            for (var w of MAP.walls) {
+                var wl = w.x - w.w/2 - safeDist, wr = w.x + w.w/2 + safeDist;
+                var wt = w.y - w.h/2 - safeDist, wb = w.y + w.h/2 + safeDist;
+                if (rx > wl && rx < wr && ry > wt && ry < wb) { valid = false; break; }
+            }
+            if (valid) {
+                for (var t in MAP.bases) {
+                    var b = MAP.bases[t];
+                    if (rx > b.x - safeDist && rx < b.x + b.w + safeDist && ry > b.y - safeDist && ry < b.y + b.h + safeDist) { valid = false; break; }
+                }
+            }
+            if (valid) { for (var s of MAP.spawns) { if (Phaser.Math.Distance.Between(rx, ry, s.x, s.y) < 60) { valid = false; break; } } }
+            if (valid) { for (var f of MAP.flags) { if (Phaser.Math.Distance.Between(rx, ry, f.x, f.y) < 80) { valid = false; break; } } }
+            attempts++;
+        }
+        if (valid) {
+            var cType = Phaser.Math.Between(1, 4); 
+            var cKey = ASSET_SETTINGS.useExternalAssets ? ASSET_SETTINGS.images['crate_'+cType].key : ('tex_crate_'+cType);
+            var obj = this.grpBreakables.create(rx, ry, cKey).setDepth(DEPTH.ITEM);
+            obj.setData('hp', 50); 
+        }
+    }
+  }
+
+  _setupPhysics() {
+    var self = this;
+    this.physics.add.collider(this.grpPlayers, this.grpWalls);
+    this.physics.add.collider(this.grpPlayers, this.grpBreakables); 
+    
+    this.physics.add.collider(this.grpBullets, this.grpWalls, function(b, w){
+      b.setActive(false).setVisible(false); b.disableBody(true, true);
+    });
+    
+    this.physics.add.overlap(this.grpBullets, this.grpBreakables, function(b, obj){
+        if (!b.active || !obj.active) return;
+        b.setActive(false).setVisible(false); b.disableBody(true, true);
+        var hp = obj.getData('hp') - b.getData('dmg');
+        if (hp <= 0) { playFx(self, 'hit'); obj.destroy(); } else {
+            obj.setData('hp', hp); obj.setTint(0xff5555); 
+            self.time.delayedCall(80, function(){ if(obj && obj.active) obj.clearTint(); });
+        }
+    });
+
+    this.physics.add.overlap(this.grpBullets, this.grpPlayers, function(b, p){
+      var ctrl = p.getData('ctrl'); var owner = b.getData('owner');
+      if (ctrl && owner && ctrl.team !== owner.team) {
+        ctrl.takeDamage(b.getData('dmg'), owner);
+        b.setActive(false).setVisible(false); b.disableBody(true, true);
+      }
+    });
+
+    this.physics.add.overlap(this.grpPlayers, this.grpPickups, function(p, item){
+      var ctrl = p.getData('ctrl');
+      if (!ctrl.isAlive || !item.active) return;
+      var type = item.getData('type'); var value = item.getData('value');
+      item.disableBody(true, true);
+
+      if (type === 'weapon') { ctrl.pickWeapon(value); } 
+      else if (type === 'health') { ctrl.hp = Math.min(ctrl.maxHp, ctrl.hp + 45); playFx(self, 'pickup'); if (ctrl.isPlayer) Bus.emit(EV.HUD); } 
+      else if (type === 'shield') { ctrl.shieldTimer = 4000; playFx(self, 'pickup'); if (ctrl.isPlayer) Bus.emit(EV.HUD); }
+      
+      var itemRef = item; var respawnFn = item.getData('respawnFn') || null; 
+      self.time.delayedCall(0, function(){
+        if (itemRef && itemRef.active === false && itemRef.scene) { itemRef.destroy(); }
+        if (respawnFn) { self.time.delayedCall(30000, function(){ if (self.gameOver) return; respawnFn(); }); }
+      });
+    });
+
+    this.physics.add.overlap(this.grpPlayers, this.grpFlags, function(p, fSprite){
+      var ctrl = p.getData('ctrl'); var fObj = fSprite.getData('info');
+      if (!ctrl || !ctrl.isAlive || !fObj) return;
+
+      if (ctrl.team !== fObj.team) {
+        if (fObj.status !== 'stolen' && !ctrl.hasFlag) {
+          if (fObj.timer) { fObj.timer.remove(); fObj.timer = null; }
+          fObj.status = 'stolen'; fObj.carrier = ctrl; ctrl.hasFlag = fObj;
+          fSprite.disableBody(true, true); playFx(self, 'flag_steal'); 
+        }
+      } else {
+        if (fObj.status === 'dropped') {
+          if (fObj.timer) { fObj.timer.remove(); fObj.timer = null; }
+          fSprite.setPosition(fObj.homeX, fObj.homeY); fObj.status = 'home'; fObj.carrier = null; playFx(self, 'pickup'); 
+        }
+      }
+    });
+  }
+
+  _initFixedWeaponSpawns() {
+    var self = this;
+    var ITEM_SPAWN_WEIGHTS = { weapon: 50, health: 30, shield: 20 };
+    var WEAPON_WEIGHTS = [ { val: 'ak47', w: 35 }, { val: 'm4a4', w: 30 }, { val: 'negev', w: 25 }, { val: 'awp', w: 10 } ];
+
+    function pickRandomWeapon() {
+      var total = WEAPON_WEIGHTS.reduce(function(sum, e){ return sum + e.w; }, 0);
+      var r = Math.random() * total; var acc = 0;
+      for (var i = 0; i < WEAPON_WEIGHTS.length; i++) { acc += WEAPON_WEIGHTS[i].w; if (r < acc) return WEAPON_WEIGHTS[i].val; }
+      return 'ak47'; 
+    }
+
+    function pickRandomItemType() {
+      var r = Math.random() * 100;
+      if (r < ITEM_SPAWN_WEIGHTS.weapon) return 'weapon';
+      if (r < ITEM_SPAWN_WEIGHTS.weapon + ITEM_SPAWN_WEIGHTS.health) return 'health';
+      return 'shield';
+    }
+
+    function getTexKey(type, val) {
+      if (type === 'weapon') { return (ASSET_SETTINGS.useExternalAssets && ASSET_SETTINGS.images['drop_' + val]) ? ASSET_SETTINGS.images['drop_' + val].key : ('wp_' + val); } 
+      else if (type === 'health') { return (ASSET_SETTINGS.useExternalAssets && ASSET_SETTINGS.images.drop_heal) ? ASSET_SETTINGS.images.drop_heal.key : 'bx_health'; } 
+      else { return (ASSET_SETTINGS.useExternalAssets && ASSET_SETTINGS.images.drop_shd) ? ASSET_SETTINGS.images.drop_shd.key : 'bx_shield'; }
+    }
+
+    MAP.spawns.forEach(function(spawnDef) {
+      var marker = self.add.circle(spawnDef.x, spawnDef.y, 18, 0xffffff, 0.08).setDepth(DEPTH.ITEM - 1); marker.setStrokeStyle(1, 0xffffff, 0.3);
+    });
+
+    function spawnItemAt(spawnDef) {
+      if (self.gameOver) return; 
+      var type = pickRandomItemType(); var val  = (type === 'weapon') ? pickRandomWeapon() : type; 
+      var texKey = getTexKey(type, val);
+      var item = self.grpPickups.create(spawnDef.x, spawnDef.y, texKey).setDepth(DEPTH.ITEM);
+      item.setData('type', type); item.setData('value', val); item.setData('respawnFn', function() { spawnItemAt(spawnDef); });
+    }
+    MAP.spawns.forEach(function(spawnDef) { spawnItemAt(spawnDef); });
+  }
+
+  dropFlag(fObj) {
+    if (this.gameOver) return; playFx(this, 'flag_drop'); 
+    var fSprite = fObj.sprite;
+    var dropX = fObj.carrier ? fObj.carrier.sprite.x : GAME.WORLD_W/2; var dropY = fObj.carrier ? fObj.carrier.sprite.y : GAME.WORLD_H/2;
+    fObj.status = 'dropped'; fObj.carrier = null; fSprite.enableBody(true, dropX, dropY, true, true);
+    
+    var self = this;
+    if (fObj.timer) { fObj.timer.remove(); fObj.timer = null; }
+    fObj.timer = this.time.delayedCall(10000, function(){
+      if (self.gameOver) return;
+      if (fObj.status === 'dropped') { 
+        fSprite.setPosition(fObj.homeX, fObj.homeY); fSprite.enableBody(true, fObj.homeX, fObj.homeY, true, true);
+        fObj.status = 'home'; fObj.timer = null;
+      }
+    });
+  }
+
+  scoreFlag(character) {
+    playFx(this, 'flag_score'); 
+    var fObj = character.hasFlag; character.hasFlag = null; this.score[character.team]++;
+    var fSprite = fObj.sprite;
+    if (fObj.timer) { fObj.timer.remove(); fObj.timer = null; }
+    fSprite.enableBody(true, fObj.homeX, fObj.homeY, true, true); fObj.status = 'home'; fObj.carrier = null;
+    Bus.emit(EV.HUD);
+    if (this.score[character.team] >= MATCH_CONFIG.targetScore) this._endGame();
+  }
+
+  _bindDOMEvents() {
+    var self = this;
+    Bus.on(EV.HUD, function(){
+      if (self.gameOver) return; 
+      document.getElementById('score-ct').innerText = self.score['Blue'];
+      document.getElementById('score-t').innerText = self.score['Red'];
+      var m = Math.floor(self.timeLeft/60), s = self.timeLeft%60;
+      document.getElementById('cs2-timer').innerText = m + ':' + (s<10?'0':'') + s;
+      
+      var p = self.player;
+      if (!p) return; 
+      document.getElementById('val-hp').innerText = p.hp || 0;
+      if (p.hp < 35) { document.getElementById('panel-hp').classList.add('low-hp'); } else { document.getElementById('panel-hp').classList.remove('low-hp'); }
+      document.getElementById('val-armor').innerText = p.shieldTimer > 0 ? "50% DR" : "NONE";
+      
+      var wDef = WEAPONS[p.currentWeapon];
+      document.getElementById('cs2-weapon-name').innerText = wDef.name.toUpperCase();
+      document.getElementById('ammo-main').innerText = p.isReloading ? 'RELOAD' : p.ammo;
+      document.getElementById('ammo-reserve').innerText = '/ ' + wDef.maxAmmo;
+    });
+
+    Bus.on(EV.KILL, function(data){
+      var kf = document.getElementById('cs2-killfeed');
+      var item = document.createElement('div'); item.className = 'cs2-kf-item';
+      var sk = document.createElement('span'); sk.className = data.kt === 'Blue' ? 'kf-p-ct' : 'kf-p-t'; sk.innerText = data.k;
+      var sw = document.createElement('span'); sw.className = 'kf-weapon'; 
+      if (ASSET_SETTINGS.useExternalAssets) {
+          var imgObj = ASSET_SETTINGS.images['kf_' + data.wKey];
+          if (imgObj) {
+              var imgIcon = document.createElement('img'); imgIcon.src = imgObj.path; imgIcon.style.height = '14px'; imgIcon.style.verticalAlign = 'middle';
+              sw.appendChild(imgIcon); sw.style.background = 'transparent'; sw.style.padding = '0';
+          } else { sw.innerText = data.wName; }
+      } else { sw.innerText = data.wName; }
+      var sv = document.createElement('span'); sv.className = data.kt === 'Blue' ? 'kf-p-t' : 'kf-p-ct'; sv.innerText = data.v;
+      
+      item.appendChild(sk); item.appendChild(sw); item.appendChild(sv); kf.appendChild(item);
+      setTimeout(function(){ if(item.parentNode) item.parentNode.removeChild(item); }, 3000);
+    });
+
+    Bus.on(EV.ALERT, function(){
+      playFx(self, 'alert'); 
+      var el = document.getElementById('tactical-alert'); el.style.display = 'block';
+      setTimeout(function(){ el.style.display = 'none'; }, 2000);
+    });
+  }
+
+  _endGame() {
+    if (this.gameOver) return;
+    playFx(this, 'end'); this.gameOver = true; this._endGameScheduled = true; 
+    this.physics.pause();
+    var win = this.score['Blue'] > this.score['Red'] ? 'C-TERRORISTS WIN' : 'TERRORISTS WIN';
+    document.getElementById('end-title').innerText = win;
+    document.getElementById('end-title').style.color = this.score['Blue'] > this.score['Red'] ? '#9bb7e8' : '#e8b25d';
+    document.getElementById('end-stats').innerHTML = 'FINAL MATCH SCORE<br>BLUE: ' + this.score['Blue'] + ' | RED: ' + this.score['Red'];
+    document.getElementById('cs2-end-screen').style.display = 'flex';
+    Bus.removeAllListeners();
+  }
+
+  update(time, delta) {
+    if (this.gameOver) return;
+    this.player.update(time, delta); this.bots.forEach(function(b){ b.update(time, delta); });
+    
+    var bullets = this.grpBullets.getChildren();
+    for (var i = 0; i < bullets.length; i++) {
+      var b = bullets[i];
+      if (b.active && time - b.getData('born') > 1500) { b.setActive(false).setVisible(false); b.disableBody(true, true); }
+    }
+
+    var self = this;
+    this.guidanceGraphics.clear(); 
+    var timeSec = time / 1000; var bounce = Math.sin(timeSec * 8) * 8;
+
+    this.flagsData.forEach(function(fObj){
+      if (fObj.status === 'stolen' && fObj.carrier) {
+        fObj.sprite.setPosition(fObj.carrier.sprite.x, fObj.carrier.sprite.y - 20);
+        if (!fObj.guideArrow) { fObj.guideArrow = self.add.sprite(0, 0, 'tex_guide_arrow').setDepth(DEPTH.FX + 10); }
+        fObj.guideArrow.setVisible(true); fObj.guideArrow.setPosition(fObj.carrier.sprite.x, fObj.carrier.sprite.y - 50 + bounce);
+        fObj.guideArrow.setTint(fObj.team === 'Blue' ? 0x5d79ae : 0xde9b35); 
+        if (fObj.team === self.player.team && fObj.carrier.team !== self.player.team) {
+          self.guidanceGraphics.lineStyle(2, 0xff3b30, 0.5);
+          self.guidanceGraphics.lineBetween(self.player.sprite.x, self.player.sprite.y, fObj.carrier.sprite.x, fObj.carrier.sprite.y);
+        }
+      } else { if (fObj.guideArrow) fObj.guideArrow.setVisible(false); }
+    });
+  }
+}
+
+var MATCH_CONFIG = {
+  teamSize: 3,     
+  targetScore: 3,
+  playerName: 'YOU',
+  playerTeam: 'Blue',
+  playerSkin: 1
+};
+
+// 正式從 Step 2 開始部署遊戲
+function startMatch() {
+  playFx(null, 'start'); 
+  
+  MATCH_CONFIG.playerName = document.getElementById('lobby-player-name').value || 'YOU';
+  MATCH_CONFIG.playerTeam = document.getElementById('lobby-player-team').value || 'Blue';
+  MATCH_CONFIG.teamSize = parseInt(document.getElementById('lobby-team-size').value) || 3;
+  MATCH_CONFIG.targetScore = parseInt(document.getElementById('lobby-target-score').value) || 3;
+  
+  // 寫入最終在 Step 2 選擇的特寫卡片 ID
+  MATCH_CONFIG.playerSkin = globalSelectedSkinId;
+  
+  document.getElementById('cs2-lobby').style.display = 'none';
+  
+  new Phaser.Game({
+    type: Phaser.AUTO,
+    parent: 'game-container',
+    width: GAME.W,
+    height: GAME.H,
+    backgroundColor: '#11161b',
+    physics: { default: 'arcade', arcade: { gravity: { y: 0 }, debug: false } },
+    scene: [GameScene]
+  });
+}
+  </script>
+</body>
+</html>
